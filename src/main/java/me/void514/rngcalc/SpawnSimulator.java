@@ -44,6 +44,7 @@ public class SpawnSimulator {
         addWitchHut(55, 33, PlaneAxis.Z, 64);
         addWitchHut(64, 22, PlaneAxis.X, 64);
         addWitchHut(65, 32, PlaneAxis.Z, 64);
+        HUT_STATES.sort(WitchHutState::compareTo);
     }
 
     @SuppressWarnings("SameParameterValue")
