@@ -1,7 +1,8 @@
 {
   "option": {
     "threads": 12,
-    "maxRegionAbs": 2000
+    "maxRegionAbs": 1000,
+    "strategy": "DISTRIBUTIVE"
   },
   "gameInfo": {
     "afkPoint": {

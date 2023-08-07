@@ -8,25 +8,25 @@ import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Objects;
 
-public class AsyncRegionTask implements Runnable {
+public abstract class AsyncRegionTask implements Runnable {
     /**
      * This array stores all possible arguments passed to nextInt() during a spawning attempt.
      * It is used to determine whether the sequence calls next(31) twice for a single nextInt() call.
      */
     private static final int[] POSSIBLE_NON_POWER_NEXT_INT_BOUNDS = new int[]{6, 80, 515, 516};
     /**
+     * The stored expected spawns for the four witch huts.
+     */
+    protected final float[] expectedSpawns;
+    protected final AsyncSpawnSimulator parent;
+    protected final int threadNum;
+    protected final int threadIndex;
+    /**
      * The 64k+n element of this array stores the chance for the k-th witch hut
      * to start with 7n extra random number invocations compared with the state
      * when all previous pack spawn attempts have been blocked.
      */
     private final float[] initialStateChances = new float[256];
-    /**
-     * The stored expected spawns for the four witch huts.
-     */
-    private final float[] expectedSpawns;
-    private final AsyncSpawnSimulator parent;
-    private final int threadNum;
-    private final int threadIndex;
     private final int maxRegionAbs;
     private final VoidRandom rand = new VoidRandom();
     private final WitchHutState[] hutStateArray;
@@ -35,7 +35,7 @@ public class AsyncRegionTask implements Runnable {
      * Cached to save time when querying the sequence.
      */
     private final int[] randomSequence = new int[1024];
-    private long count = 0L;
+    protected long count = 0L;
 
     public AsyncRegionTask(int threadIndex, AsyncSpawnSimulator parent, WitchHutState[] hutStateArray) {
         this.threadIndex = threadIndex;
@@ -71,16 +71,9 @@ public class AsyncRegionTask implements Runnable {
         }
     }
 
-    private void checkRegionSpawning(int regionX, int regionZ, long progress) {
-        if (progress % threadNum == threadIndex) {
-            float expected = compute(regionX, regionZ);
-            parent.regionCounter.incrementAndGet();
-            ++count;
-            parent.updateResult(regionX, regionZ, expected, expectedSpawns);
-        }
-    }
+    protected abstract void checkRegionSpawning(int regionX, int regionZ, long progress);
 
-    private float compute(int regionX, int regionZ) {
+    protected float compute(int regionX, int regionZ) {
         if (initialize(regionX, regionZ)) {
             return simulateHutSpawns();
         } else {

@@ -1,6 +1,9 @@
 package me.void514.rngcalc;
 
 import me.void514.rngcalc.concurrent.AsyncSpawnSimulator;
+import me.void514.rngcalc.concurrent.CompetitiveSimulator;
+import me.void514.rngcalc.concurrent.DistributiveSimulator;
+import me.void514.rngcalc.concurrent.ThreadingMode;
 import me.void514.rngcalc.math.ChunkPos;
 import me.void514.rngcalc.math.PlaneAxis;
 import me.void514.rngcalc.witch.WitchHutState;
@@ -18,32 +21,22 @@ import java.util.List;
 
 public class SpawnSimulator {
 
+    static final boolean earlyReturn = false;
     private static final List<WitchHutState> hutStateList = new ArrayList<>();
     private static final int WORLD_MAX_ABS = (29999984 / 16) / 80;
     private static int maxAbs = 3200;
     private static int threadNum = 1;
-    private float maxExpectedSpawns = -1.0f;
-    private int bestX, bestZ;
-    private final WitchSpawnSimulator simulator = new WitchSpawnSimulator(hutStateList);
+    private static ThreadingMode strategy = ThreadingMode.DISTRIBUTIVE;
     private static long worldSeed = 0L;
     /**
      * Spawning range start
      */
     private static int srsX = 0;
     private static int srsZ = 0;
+    private final WitchSpawnSimulator simulator = new WitchSpawnSimulator(hutStateList);
     private final float[] maxExpectedArray = new float[4];
-
-    private void attemptRegion(int regionX, int regionZ) {
-        float expected = simulator.compute(regionX, regionZ, worldSeed);
-        if (expected > maxExpectedSpawns) {
-            bestX = regionX;
-            bestZ = regionZ;
-            maxExpectedSpawns = expected;
-            System.arraycopy(simulator.expectedSpawns, 0, maxExpectedArray, 0, 4);
-            System.out.println("woodland mansion region: [" + bestX + ", " + bestZ + "], "
-                    + maxExpectedSpawns + "/gt - " + Arrays.toString(maxExpectedArray));
-        }
-    }
+    private float maxExpectedSpawns = -1.0f;
+    private int bestX, bestZ;
 
     @SuppressWarnings("SameParameterValue")
     private static void addWitchHut(int posX, int posZ, PlaneAxis z, int yStart) {
@@ -57,8 +50,6 @@ public class SpawnSimulator {
         }
         hutStateList.add(new WitchHutState(new ChunkPos(posX - srsX, posZ - srsZ), z, yStart, 70, floors));
     }
-
-    static final boolean earlyReturn = false;
 
     public static void main(String[] args) {
         String configPath;
@@ -152,6 +143,7 @@ public class SpawnSimulator {
                 if (configThreads > 1) {
                     threadNum = configThreads;
                 }
+                strategy = jsonOption.optEnum(ThreadingMode.class, "strategy", strategy);
             }
             if (maxAbs > WORLD_MAX_ABS || maxAbs < 0) {
                 maxAbs = WORLD_MAX_ABS;
@@ -162,11 +154,26 @@ public class SpawnSimulator {
     }
 
     private static void runAsyncSimulator() {
-        AsyncSpawnSimulator asyncSimulator = new AsyncSpawnSimulator(hutStateList, worldSeed);
+        AsyncSpawnSimulator asyncSimulator = switch (strategy) {
+            case DISTRIBUTIVE -> new DistributiveSimulator(hutStateList, worldSeed);
+            case COMPETITIVE -> new CompetitiveSimulator(hutStateList, worldSeed);
+        };
         asyncSimulator.setThreadNum(threadNum);
         asyncSimulator.setMaxRegionAbs(maxAbs);
         asyncSimulator.setOutStream(System.out);
         asyncSimulator.run();
         asyncSimulator.reportResult();
+    }
+
+    private void attemptRegion(int regionX, int regionZ) {
+        float expected = simulator.compute(regionX, regionZ, worldSeed);
+        if (expected > maxExpectedSpawns) {
+            bestX = regionX;
+            bestZ = regionZ;
+            maxExpectedSpawns = expected;
+            System.arraycopy(simulator.expectedSpawns, 0, maxExpectedArray, 0, 4);
+            System.out.println("woodland mansion region: [" + bestX + ", " + bestZ + "], "
+                    + maxExpectedSpawns + "/gt - " + Arrays.toString(maxExpectedArray));
+        }
     }
 }

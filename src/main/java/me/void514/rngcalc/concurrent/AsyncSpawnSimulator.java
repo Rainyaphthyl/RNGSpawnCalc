@@ -10,7 +10,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-public class AsyncSpawnSimulator implements Runnable {
+public abstract class AsyncSpawnSimulator implements Runnable {
     final long worldSeed;
     final AtomicLong regionCounter = new AtomicLong(0L);
     final Semaphore finishAck = new Semaphore(0, true);
@@ -97,8 +97,9 @@ public class AsyncSpawnSimulator implements Runnable {
             finishAck.drainPermits();
             final WitchHutState[] hutStateArray = hutStateList.toArray(new WitchHutState[0]);
             for (int i = 0; i < threadNum; ++i) {
-                AsyncRegionTask task = new AsyncRegionTask(i, this, hutStateArray);
+                AsyncRegionTask task = createRegionTask(i, hutStateArray);
                 Thread thread = new Thread(task);
+                thread.setDaemon(true);
                 threadList.add(thread);
             }
             if (threadList.size() != threadNum) {
@@ -131,8 +132,11 @@ public class AsyncSpawnSimulator implements Runnable {
         nanoElapsed = timeEnd - timeStart;
     }
 
+    protected abstract AsyncRegionTask createRegionTask(int i, WitchHutState[] hutStateArray);
+
     public void reportResult() {
-        outStream.println("Operation ran for " + nanoElapsed / 1000000 + " milliseconds, and checked " + regionCounter.get() + " woodland mansion regions.");
+        outStream.println("Operation ran for " + nanoElapsed / 1000000
+                + " milliseconds, and checked " + regionCounter.get() + " woodland mansion regions.");
         outStream.println("Maximum efficiency is achieved with woodland mansion region: X = " + bestX + ", Z = " + bestZ);
         outStream.println("The spawning rate is " + maxExpectedSpawns + "/gt, or "
                 + ((int) (72 * maxExpectedSpawns)) + "k/h in witch spawns,");
