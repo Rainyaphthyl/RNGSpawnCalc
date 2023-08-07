@@ -2,11 +2,10 @@ package me.void514.rngcalc.witch;
 
 import me.void514.rngcalc.math.ChunkPos;
 import me.void514.rngcalc.math.PlaneAxis;
+import me.void514.rngcalc.math.VoidRandom;
 
-import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Random;
 
 public class WitchSpawnSimulator {
     /**
@@ -15,18 +14,7 @@ public class WitchSpawnSimulator {
      */
     private static final int[] POSSIBLE_NON_POWER_NEXT_INT_BOUNDS = new int[]{6, 80, 515, 516};
 
-    private static final Method RANDOM_NEXT;
-
-    static {
-        try {
-            RANDOM_NEXT = Random.class.getDeclaredMethod("next", int.class);
-            RANDOM_NEXT.setAccessible(true);
-        } catch (Throwable throwable) {
-            throw new AssertionError(throwable);
-        }
-    }
-
-    private final Random rand = new Random();
+    private final VoidRandom rand = new VoidRandom();
 
     private final List<WitchHutState> hutStates;
 
@@ -65,7 +53,7 @@ public class WitchSpawnSimulator {
         try {
             int value;
             for (int j = 0; j < randomSequence.length; j++) {
-                value = randomSequence[j] = (Integer) RANDOM_NEXT.invoke(rand, 31);
+                value = randomSequence[j] = rand.next(31); //(Integer) RANDOM_NEXT.invoke(rand, 31);
                 // this checks for uneven values; if such a value exists, refuse to process this seed
                 // 39.1 out of a million seeds will be refused
                 // therefore, we will reject approximately 100k seeds
