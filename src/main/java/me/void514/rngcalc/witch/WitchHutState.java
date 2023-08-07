@@ -9,4 +9,8 @@ public record WitchHutState(
     public int compareTo(WitchHutState other) {
         return pos.compareTo(other.pos);
     }
+
+    public int chunkIndex() {
+        return 15 * pos.x() + pos.z();
+    }
 }

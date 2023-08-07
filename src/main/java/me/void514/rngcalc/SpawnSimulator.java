@@ -1,5 +1,6 @@
 package me.void514.rngcalc;
 
+import me.void514.rngcalc.concurrent.AsyncSpawnSimulator;
 import me.void514.rngcalc.math.ChunkPos;
 import me.void514.rngcalc.math.PlaneAxis;
 import me.void514.rngcalc.witch.WitchHutState;
@@ -11,6 +12,7 @@ import org.json.JSONObject;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -20,6 +22,7 @@ public class SpawnSimulator {
     private static final List<WitchHutState> hutStateList = new ArrayList<>();
     private static final int WORLD_MAX_ABS = (29999984 / 16) / 80;
     private static int maxAbs = 3200;
+    private static int threadNum = 1;
     private float maxExpectedSpawns = -1.0f;
     private int bestX, bestZ;
     private final WitchSpawnSimulator simulator = new WitchSpawnSimulator(hutStateList);
@@ -69,6 +72,10 @@ public class SpawnSimulator {
         System.out.println("Searching according to \"" + configPath + "\"...");
         if (earlyReturn) main1();
         if (earlyReturn) return;
+        if (threadNum > 1) {
+            runAsyncSimulator();
+            return;
+        }
         final long startTime = System.currentTimeMillis();
         final SpawnSimulator spawnSimulator = new SpawnSimulator();
         for (int abs = 1; abs <= maxAbs; abs++) {
@@ -142,12 +149,25 @@ public class SpawnSimulator {
             JSONObject jsonOption = jsonGlobal.optJSONObject("option");
             if (jsonOption != null) {
                 maxAbs = jsonOption.optInt("maxRegionAbs", maxAbs);
+                int configThreads = jsonOption.optInt("threads", 1);
+                if (configThreads > 1) {
+                    threadNum = configThreads;
+                }
             }
-            if (maxAbs > WORLD_MAX_ABS) {
+            if (maxAbs > WORLD_MAX_ABS || maxAbs < 0) {
                 maxAbs = WORLD_MAX_ABS;
             }
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static void runAsyncSimulator() {
+        AsyncSpawnSimulator asyncSimulator = new AsyncSpawnSimulator(hutStateList, worldSeed);
+        asyncSimulator.setThreadNum(threadNum);
+        asyncSimulator.setMaxRegionAbs(maxAbs);
+        asyncSimulator.setOutStream(System.out);
+        asyncSimulator.run();
+        asyncSimulator.reportResult();
     }
 }
