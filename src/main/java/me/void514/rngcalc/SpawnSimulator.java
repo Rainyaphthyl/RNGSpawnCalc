@@ -1,6 +1,8 @@
 package me.void514.rngcalc;
 
+import me.void514.rngcalc.math.BlockPos;
 import me.void514.rngcalc.math.ChunkPos;
+import me.void514.rngcalc.math.PlaneAxis;
 import me.void514.rngcalc.witch.WitchHutState;
 import me.void514.rngcalc.witch.WitchSpawnSimulator;
 
@@ -15,7 +17,8 @@ public class SpawnSimulator {
     private float maxExpectedSpawns = -1.0f;
     private int maxX, maxZ;
     private final WitchSpawnSimulator simulator = new WitchSpawnSimulator(HUT_STATES);
-    private static final long worldSeed = 1306145184061456995L;
+    private static final long worldSeed = -9223270471503497825L;
+    private static final BlockPos afkPoint = new BlockPos(956, 67, 444);
     private final float[] maxExpectedArray = new float[4];
 
     private void attemptRegion(int regionX, int regionZ) {
@@ -25,14 +28,35 @@ public class SpawnSimulator {
             maxZ = regionZ;
             maxExpectedSpawns = expected;
             System.arraycopy(simulator.expectedSpawns, 0, maxExpectedArray, 0, 4);
+            System.out.println("woodland mansion region: [" + maxX + ", " + maxZ + "], "
+                    + maxExpectedSpawns + "/gt - " + Arrays.toString(maxExpectedArray));
         }
     }
 
+    /**
+     * Spawning range start
+     */
+    private static final int srsX = (afkPoint.x() >> 4) - 7;
+    private static final int srsZ = (afkPoint.z() >> 4) - 7;
+
     static {
-        HUT_STATES.add(new WitchHutState(new ChunkPos(3, 2), 64, 70, new int[] {64, 67, 70}));
-        HUT_STATES.add(new WitchHutState(new ChunkPos(3, 13), 64, 70, new int[] {64, 67, 70}));
-        HUT_STATES.add(new WitchHutState(new ChunkPos(12, 2), 65, 70, new int[] {67, 70}));
-        HUT_STATES.add(new WitchHutState(new ChunkPos(13, 12), 64, 70, new int[] {64, 67, 70}));
+        addWitchHut(55, 22, PlaneAxis.Z, 64);
+        addWitchHut(55, 33, PlaneAxis.Z, 64);
+        addWitchHut(64, 22, PlaneAxis.X, 64);
+        addWitchHut(65, 32, PlaneAxis.Z, 64);
+    }
+
+    @SuppressWarnings("SameParameterValue")
+    private static void addWitchHut(int posX, int posZ, PlaneAxis z, int yStart) {
+        List<Integer> floorList = new ArrayList<>();
+        for (int y = 70; y >= yStart; y -= 3) {
+            floorList.add(0, y);
+        }
+        int[] floors = new int[floorList.size()];
+        for (int i = 0; i < floors.length; ++i) {
+            floors[i] = floorList.get(i);
+        }
+        HUT_STATES.add(new WitchHutState(new ChunkPos(posX - srsX, posZ - srsZ), z, yStart, 70, floors));
     }
 
     static final boolean earlyReturn = false;
@@ -43,12 +67,12 @@ public class SpawnSimulator {
         final int MAX_ABS = 3200;
         final long startTime = System.currentTimeMillis();
         final SpawnSimulator spawnSimulator = new SpawnSimulator();
-        for (int abs = 1; abs <= MAX_ABS; abs ++) {
-            for (int x = -abs; x <= abs; x ++) {
+        for (int abs = 1; abs <= MAX_ABS; abs++) {
+            for (int x = -abs; x <= abs; x++) {
                 spawnSimulator.attemptRegion(x, -abs);
                 spawnSimulator.attemptRegion(x, abs);
             }
-            for (int z = 1 - abs; z < abs; z ++) {
+            for (int z = 1 - abs; z < abs; z++) {
                 spawnSimulator.attemptRegion(abs, z);
                 spawnSimulator.attemptRegion(-abs, z);
             }

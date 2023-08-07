@@ -15,8 +15,6 @@ public record ChunkPos(int x, int z) implements Comparable<ChunkPos> {
     public int compareTo(ChunkPos other) {
         if (x < other.x) return -1;
         else if (x > other.x) return 1;
-        else if (z < other.z) return -1;
-        else if (z > other.z) return 1;
-        else return 0;
+        else return Integer.compare(z, other.z);
     }
 }
