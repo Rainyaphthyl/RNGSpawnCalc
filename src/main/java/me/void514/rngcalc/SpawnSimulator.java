@@ -5,7 +5,11 @@ import me.void514.rngcalc.math.ChunkPos;
 import me.void514.rngcalc.math.PlaneAxis;
 import me.void514.rngcalc.witch.WitchHutState;
 import me.void514.rngcalc.witch.WitchSpawnSimulator;
+import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -63,6 +67,13 @@ public class SpawnSimulator {
     static final boolean earlyReturn = false;
 
     public static void main(String[] args) {
+        String pathName;
+        if (args != null && args.length > 0) {
+            pathName = args[0];
+        } else {
+            pathName = "configs/NativeFaith.json";
+        }
+        readConfig(pathName);
         if (earlyReturn) main1();
         if (earlyReturn) return;
         final int MAX_ABS = 3200;
@@ -95,5 +106,26 @@ public class SpawnSimulator {
         System.out.println(Arrays.toString(Arrays.copyOfRange(simulator.initialStateChances, 128, 192)));
         System.out.println(Arrays.toString(Arrays.copyOfRange(simulator.initialStateChances, 192, 256)));
         System.out.println(Arrays.toString(simulator.expectedSpawns));
+    }
+
+    private static void readConfig(String pathName) {
+        File file = new File(pathName);
+        StringBuilder jsonText = new StringBuilder();
+        try (FileReader fileReader = new FileReader(file)) {
+            char[] buffer = new char[4096];
+            int actualLength;
+            while (true) {
+                Arrays.fill(buffer, (char) 0);
+                actualLength = fileReader.read(buffer);
+                if (actualLength > 0) {
+                    jsonText.append(buffer, 0, actualLength);
+                } else {
+                    break;
+                }
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        JSONObject jsonObject = new JSONObject(jsonText.toString());
     }
 }
