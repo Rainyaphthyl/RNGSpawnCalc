@@ -3,10 +3,7 @@ package me.void514.rngcalc.concurrent;
 import me.void514.rngcalc.witch.WitchHutState;
 
 import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
@@ -29,7 +26,7 @@ public class AsyncSpawnSimulator implements Runnable {
     private int threadNum = 1;
     private int maxRegionAbs = 1;
     private PrintStream outStream = System.out;
-    private long secElapsed;
+    private long nanoElapsed = 0L;
 
     public AsyncSpawnSimulator(List<WitchHutState> hutStateList, long worldSeed) {
         this.hutStateList.addAll(hutStateList);
@@ -96,11 +93,12 @@ public class AsyncSpawnSimulator implements Runnable {
         Lock readLock = taskLock.readLock();
         try {
             readLock.lockInterruptibly();
+            finishFlag.drainPermits();
+            finishAck.drainPermits();
             final WitchHutState[] hutStateArray = hutStateList.toArray(new WitchHutState[0]);
             for (int i = 0; i < threadNum; ++i) {
                 AsyncRegionTask task = new AsyncRegionTask(i, this, hutStateArray);
                 Thread thread = new Thread(task);
-                thread.setDaemon(true);
                 threadList.add(thread);
             }
             if (threadList.size() != threadNum) {
@@ -110,7 +108,19 @@ public class AsyncSpawnSimulator implements Runnable {
             for (Thread thread : threadList) {
                 thread.start();
             }
+            final Timer timer = new Timer(true);
+            final long size = maxRegionAbs * 2L + 1L;
+            final long regionNum = size * size;
+            timer.schedule(new TimerTask() {
+                @Override
+                public void run() {
+                    long progress = regionCounter.get();
+                    System.out.println("Progress: " + progress + "/" + regionNum
+                            + " = " + String.format("%.2f", 100.0 * progress / regionNum) + "%");
+                }
+            }, 12000, 15000);
             finishFlag.acquire(threadNum);
+            timer.cancel();
             finishAck.release(threadNum);
         } catch (InterruptedException | IllegalThreadStateException e) {
             throw new RuntimeException(e);
@@ -118,11 +128,11 @@ public class AsyncSpawnSimulator implements Runnable {
             readLock.unlock();
         }
         long timeEnd = System.nanoTime();
-        secElapsed = (timeEnd - timeStart) / 1_000_000;
+        nanoElapsed = timeEnd - timeStart;
     }
 
     public void reportResult() {
-        outStream.println("Operation ran for " + secElapsed + " seconds, and checked " + regionCounter.get() + " woodland mansion regions.");
+        outStream.println("Operation ran for " + nanoElapsed / 1000000 + " milliseconds, and checked " + regionCounter.get() + " woodland mansion regions.");
         outStream.println("Maximum efficiency is achieved with woodland mansion region: X = " + bestX + ", Z = " + bestZ);
         outStream.println("The spawning rate is " + maxExpectedSpawns + "/gt, or "
                 + ((int) (72 * maxExpectedSpawns)) + "k/h in witch spawns,");
