@@ -54,7 +54,7 @@ public class SpawnSimulator {
         if (args != null && args.length > 0) {
             configPath = args[0];
         } else {
-            configPath = "configs/NativeFaith.json";
+            configPath = "configs/sample.json";
         }
         initFromConfig(configPath);
         System.out.println("Searching according to \"" + configPath + "\"...");
@@ -167,7 +167,7 @@ public class SpawnSimulator {
             Date dateObj = new Date();
             SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd-HHmmss-SSS.ZZZZ", Locale.CANADA_FRENCH);
             String dateTxt = dateFormat.format(dateObj);
-            String fileName = dir.getPath() + "/" + dateTxt + ".log";
+            String fileName = dir.getPath() + "/" + dateTxt + ".out";
             try {
                 Writer writer = new BufferedWriter(new FileWriter(fileName, StandardCharsets.UTF_8));
                 asyncSimulator.setWriter(writer);

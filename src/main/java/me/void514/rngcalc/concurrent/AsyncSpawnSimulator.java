@@ -19,6 +19,7 @@ public abstract class AsyncSpawnSimulator implements Runnable {
     final Semaphore finishFlag = new Semaphore(0);
     private final ReadWriteLock taskLock = new ReentrantReadWriteLock();
     private final ReadWriteLock resultLock = new ReentrantReadWriteLock();
+    private final ReadWriteLock outputLock = new ReentrantReadWriteLock();
     private final List<WitchHutState> hutStateList = new ArrayList<>();
     private final List<Thread> threadList = new ArrayList<>();
     private final float[] maxExpectedArray;
@@ -167,13 +168,16 @@ public abstract class AsyncSpawnSimulator implements Runnable {
         if (writer instanceof PrintWriter) {
             ((PrintWriter) writer).println(message);
         } else {
+            Lock writeLock = outputLock.writeLock();
             try {
+                writeLock.lockInterruptibly();
                 writer.write(message);
                 writer.append('\n');
                 writer.flush();
-            } catch (IOException e) {
+            } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             } finally {
+                writeLock.unlock();
                 System.out.println(message);
             }
         }
