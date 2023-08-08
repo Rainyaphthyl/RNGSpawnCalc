@@ -4,7 +4,6 @@ import me.void514.rngcalc.math.PlaneAxis;
 import me.void514.rngcalc.math.VoidRandom;
 import me.void514.rngcalc.witch.WitchHutState;
 
-import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -61,8 +60,7 @@ public abstract class AsyncRegionTask implements Runnable {
                 checkRegionSpawning(abs, rz, progress++);
             }
         }
-        PrintStream outStream = parent.getOutStream();
-        outStream.println("Thread " + threadIndex + " processed " + count + " regions.");
+        parent.logInfoLine("Thread " + threadIndex + " processed " + count + " regions.");
         parent.finishFlag.release();
         try {
             parent.finishAck.acquire();

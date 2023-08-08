@@ -12,12 +12,10 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
 public class SpawnSimulator {
 
@@ -160,7 +158,23 @@ public class SpawnSimulator {
         };
         asyncSimulator.setThreadNum(threadNum);
         asyncSimulator.setMaxRegionAbs(maxAbs);
-        asyncSimulator.setOutStream(System.out);
+        File dir = new File("run/output/");
+        boolean flag = dir.isDirectory();
+        if (!flag) {
+            flag = dir.mkdirs();
+        }
+        if (flag) {
+            Date dateObj = new Date();
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyyMMdd-HHmmss-SSS.ZZZZ", Locale.CANADA_FRENCH);
+            String dateTxt = dateFormat.format(dateObj);
+            String fileName = dir.getPath() + "/" + dateTxt + ".log";
+            try {
+                Writer writer = new BufferedWriter(new FileWriter(fileName, StandardCharsets.UTF_8));
+                asyncSimulator.setWriter(writer);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
         asyncSimulator.run();
         asyncSimulator.reportResult();
     }

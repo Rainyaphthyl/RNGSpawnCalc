@@ -2,7 +2,9 @@ package me.void514.rngcalc.concurrent;
 
 import me.void514.rngcalc.witch.WitchHutState;
 
-import java.io.PrintStream;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.io.Writer;
 import java.util.*;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicLong;
@@ -25,7 +27,7 @@ public abstract class AsyncSpawnSimulator implements Runnable {
     private int bestZ = 0;
     private int threadNum = 1;
     private int maxRegionAbs = 1;
-    private PrintStream outStream = System.out;
+    private Writer writer = new PrintWriter(System.out);
     private long nanoElapsed = 0L;
 
     public AsyncSpawnSimulator(List<WitchHutState> hutStateList, long worldSeed) {
@@ -35,12 +37,8 @@ public abstract class AsyncSpawnSimulator implements Runnable {
         this.worldSeed = worldSeed;
     }
 
-    public PrintStream getOutStream() {
-        return outStream;
-    }
-
-    public void setOutStream(PrintStream outStream) {
-        this.outStream = Objects.requireNonNull(outStream);
+    public void setWriter(Writer writer) {
+        this.writer = writer;
     }
 
     public int getThreadNum() {
@@ -116,6 +114,7 @@ public abstract class AsyncSpawnSimulator implements Runnable {
                 @Override
                 public void run() {
                     long progress = regionCounter.get();
+                    // This should not be in the output file
                     System.out.println("Progress: " + progress + "/" + regionNum
                             + " = " + String.format("%.2f", 100.0 * progress / regionNum) + "%");
                 }
@@ -135,13 +134,13 @@ public abstract class AsyncSpawnSimulator implements Runnable {
     protected abstract AsyncRegionTask createRegionTask(int i, WitchHutState[] hutStateArray);
 
     public void reportResult() {
-        outStream.println("Operation ran for " + nanoElapsed / 1000000
+        logInfoLine("Operation ran for " + nanoElapsed / 1000000
                 + " milliseconds, and checked " + regionCounter.get() + " woodland mansion regions.");
-        outStream.println("Maximum efficiency is achieved with woodland mansion region: X = " + bestX + ", Z = " + bestZ);
-        outStream.println("The spawning rate is " + maxExpectedSpawns + "/gt, or "
+        logInfoLine("Maximum efficiency is achieved with woodland mansion region: X = " + bestX + ", Z = " + bestZ);
+        logInfoLine("The spawning rate is " + maxExpectedSpawns + "/gt, or "
                 + ((int) (72 * maxExpectedSpawns)) + "k/h in witch spawns,");
-        outStream.println("  with the rate of the four farms being " + Arrays.toString(maxExpectedArray));
-        outStream.println("The farm efficiency is " + ((int) (144 * maxExpectedSpawns))
+        logInfoLine("  with the rate of the four farms being " + Arrays.toString(maxExpectedArray));
+        logInfoLine("The farm efficiency is " + ((int) (144 * maxExpectedSpawns))
                 + "k/h in drops without looting, or " + ((int) (360 * maxExpectedSpawns)) + "k/h with looting.");
     }
 
@@ -154,13 +153,29 @@ public abstract class AsyncSpawnSimulator implements Runnable {
                 bestZ = regionZ;
                 maxExpectedSpawns = expected;
                 System.arraycopy(expectedSpawns, 0, maxExpectedArray, 0, maxExpectedArray.length);
-                outStream.println("woodland mansion region: [" + bestX + ", " + bestZ + "], "
+                logInfoLine("woodland mansion region: [" + bestX + ", " + bestZ + "], "
                         + maxExpectedSpawns + "/gt - " + Arrays.toString(maxExpectedArray));
             }
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
             writeLock.unlock();
+        }
+    }
+
+    public void logInfoLine(String message) {
+        if (writer instanceof PrintWriter) {
+            ((PrintWriter) writer).println(message);
+        } else {
+            try {
+                writer.write(message);
+                writer.append('\n');
+                writer.flush();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            } finally {
+                System.out.println(message);
+            }
         }
     }
 }
