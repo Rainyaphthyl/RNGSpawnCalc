@@ -26,6 +26,7 @@ public abstract class AsyncRegionTask implements Runnable {
      * when all previous pack spawn attempts have been blocked.
      */
     private final float[] initialStateChances = new float[256];
+    private final int minRegionAbs;
     private final int maxRegionAbs;
     private final VoidRandom rand = new VoidRandom();
     private final WitchHutState[] hutStateArray;
@@ -40,6 +41,7 @@ public abstract class AsyncRegionTask implements Runnable {
         this.threadIndex = threadIndex;
         this.parent = Objects.requireNonNull(parent);
         threadNum = parent.getThreadNum();
+        minRegionAbs = parent.getMinRegionAbs();
         maxRegionAbs = parent.getMaxRegionAbs();
         this.hutStateArray = Objects.requireNonNull(hutStateArray);
         expectedSpawns = new float[this.hutStateArray.length];
@@ -49,8 +51,10 @@ public abstract class AsyncRegionTask implements Runnable {
     public void run() {
         long progress = 0L;
         count = 0L;
-        checkRegionSpawning(0, 0, progress++);
-        for (int abs = 1; abs <= maxRegionAbs; ++abs) {
+        if (minRegionAbs <= 0) {
+            checkRegionSpawning(0, 0, progress++);
+        }
+        for (int abs = Math.max(1, minRegionAbs); abs <= maxRegionAbs; ++abs) {
             for (int rx = -abs; rx <= abs; ++rx) {
                 checkRegionSpawning(rx, -abs, progress++);
                 checkRegionSpawning(rx, abs, progress++);

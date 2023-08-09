@@ -27,7 +27,9 @@ public abstract class AsyncSpawnSimulator implements Runnable {
     private int bestX = 0;
     private int bestZ = 0;
     private int threadNum = 1;
+    private int minRegionAbs = 0;
     private int maxRegionAbs = 1;
+    private long regionNum = 1;
     private Writer writer = new PrintWriter(System.out);
     private long nanoElapsed = 0L;
 
@@ -64,6 +66,29 @@ public abstract class AsyncSpawnSimulator implements Runnable {
         }
     }
 
+    public int getMinRegionAbs() {
+        Lock readLock = taskLock.readLock();
+        try {
+            readLock.lock();
+            return minRegionAbs;
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    public void setMinRegionAbs(int minRegionAbs) {
+        Lock writeLock = taskLock.writeLock();
+        try {
+            writeLock.lockInterruptibly();
+            this.minRegionAbs = minRegionAbs;
+            resetRegionNum();
+        } catch (InterruptedException e) {
+            throw new RuntimeException(e);
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
     public int getMaxRegionAbs() {
         Lock readLock = taskLock.readLock();
         try {
@@ -79,6 +104,7 @@ public abstract class AsyncSpawnSimulator implements Runnable {
         try {
             writeLock.lockInterruptibly();
             this.maxRegionAbs = maxRegionAbs;
+            resetRegionNum();
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         } finally {
@@ -109,8 +135,6 @@ public abstract class AsyncSpawnSimulator implements Runnable {
                 thread.start();
             }
             final Timer timer = new Timer(true);
-            final long size = maxRegionAbs * 2L + 1L;
-            final long regionNum = size * size;
             timer.schedule(new TimerTask() {
                 @Override
                 public void run() {
@@ -130,6 +154,18 @@ public abstract class AsyncSpawnSimulator implements Runnable {
         }
         long timeEnd = System.nanoTime();
         nanoElapsed = timeEnd - timeStart;
+    }
+
+    private void resetRegionNum() {
+        long size = maxRegionAbs * 2L + 1L;
+        long total = size * size;
+        if (minRegionAbs > 0) {
+            long core = minRegionAbs * 2L - 1L;
+            long inner = core * core;
+            regionNum = total - inner;
+        } else {
+            regionNum = total;
+        }
     }
 
     protected abstract AsyncRegionTask createRegionTask(int i, WitchHutState[] hutStateArray);

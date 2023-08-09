@@ -18,10 +18,11 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class SpawnSimulator {
-
     static final boolean earlyReturn = false;
     private static final List<WitchHutState> hutStateList = new ArrayList<>();
+    private static final int WORLD_MIN_ABS = 0;
     private static final int WORLD_MAX_ABS = (29999984 / 16) / 80;
+    private static int minAbs = 0;
     private static int maxAbs = 3200;
     private static int threadNum = 1;
     private static ThreadingMode strategy = ThreadingMode.DISTRIBUTIVE;
@@ -136,6 +137,7 @@ public class SpawnSimulator {
             hutStateList.sort(WitchHutState::compareTo);
             JSONObject jsonOption = jsonGlobal.optJSONObject("option");
             if (jsonOption != null) {
+                minAbs = jsonOption.optInt("minRegionAbs", minAbs);
                 maxAbs = jsonOption.optInt("maxRegionAbs", maxAbs);
                 int configThreads = jsonOption.optInt("threads", 1);
                 if (configThreads > 1) {
@@ -145,6 +147,12 @@ public class SpawnSimulator {
             }
             if (maxAbs > WORLD_MAX_ABS || maxAbs < 0) {
                 maxAbs = WORLD_MAX_ABS;
+            }
+            if (minAbs < WORLD_MIN_ABS) {
+                minAbs = WORLD_MIN_ABS;
+            }
+            if (minAbs > maxAbs) {
+                minAbs = maxAbs;
             }
         } catch (JSONException e) {
             throw new RuntimeException(e);
@@ -157,6 +165,7 @@ public class SpawnSimulator {
             case COMPETITIVE -> new CompetitiveSimulator(hutStateList, worldSeed);
         };
         asyncSimulator.setThreadNum(threadNum);
+        asyncSimulator.setMinRegionAbs(minAbs);
         asyncSimulator.setMaxRegionAbs(maxAbs);
         File dir = new File("run/output/");
         boolean flag = dir.isDirectory();

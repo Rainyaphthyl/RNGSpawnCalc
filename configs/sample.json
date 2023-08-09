@@ -1,6 +1,7 @@
 {
   "option": {
     "threads": 12,
+    "minRegionAbs": 10,
     "maxRegionAbs": 10000,
     "strategy": "DISTRIBUTIVE"
   },
