@@ -1,0 +1,41 @@
+{
+  "option": {
+    "threads": 12,
+    "minRegionAbs": 10,
+    "maxRegionAbs": 10000,
+    "strategy": "DISTRIBUTIVE"
+  },
+  "gameInfo": {
+    "afkPoint": {
+      "x": 956,
+      "z": 444
+    },
+    "worldSeed": -9223270471503497825,
+    "witchHutList": [
+      {
+        "cx": 55,
+        "cz": 22,
+        "axis": "Z",
+        "yStart": 64
+      },
+      {
+        "cx": 55,
+        "cz": 33,
+        "axis": "Z",
+        "yStart": 64
+      },
+      {
+        "cx": 64,
+        "cz": 22,
+        "axis": "X",
+        "yStart": 64
+      },
+      {
+        "cx": 65,
+        "cz": 32,
+        "axis": "Z",
+        "yStart": 64
+      }
+    ]
+  }
+}

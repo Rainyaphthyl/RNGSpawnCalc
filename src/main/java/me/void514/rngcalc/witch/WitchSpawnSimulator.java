@@ -1,12 +1,11 @@
 package me.void514.rngcalc.witch;
 
 import me.void514.rngcalc.math.ChunkPos;
+import me.void514.rngcalc.math.PlaneAxis;
+import me.void514.rngcalc.math.VoidRandom;
 
-import java.lang.reflect.Method;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Random;
 
 public class WitchSpawnSimulator {
     /**
@@ -15,20 +14,9 @@ public class WitchSpawnSimulator {
      */
     private static final int[] POSSIBLE_NON_POWER_NEXT_INT_BOUNDS = new int[]{6, 80, 515, 516};
 
-    private static final Method RANDOM_NEXT;
+    private final VoidRandom rand = new VoidRandom();
 
-    static {
-        try {
-            RANDOM_NEXT = Random.class.getDeclaredMethod("next", int.class);
-            RANDOM_NEXT.setAccessible(true);
-        } catch (Throwable throwable) {
-            throw new AssertionError(throwable);
-        }
-    }
-
-    private final Random rand = new Random();
-
-    private List<WitchHutState> hutStates;
+    private final List<WitchHutState> hutStates;
 
     /**
      * The sequence obtained by repeatedly invoking next(31) on a Random instance.
@@ -65,7 +53,7 @@ public class WitchSpawnSimulator {
         try {
             int value;
             for (int j = 0; j < randomSequence.length; j++) {
-                value = randomSequence[j] = (Integer) RANDOM_NEXT.invoke(rand, 31);
+                value = randomSequence[j] = rand.next(31); //(Integer) RANDOM_NEXT.invoke(rand, 31);
                 // this checks for uneven values; if such a value exists, refuse to process this seed
                 // 39.1 out of a million seeds will be refused
                 // therefore, we will reject approximately 100k seeds
@@ -133,9 +121,9 @@ public class WitchSpawnSimulator {
         pssy = randomSequence[ptr + 2] % 80;
         if (pssy < yStart || pssy > yEnd) {
             // blocked pack spawning - advance with always 0*7 extra random calls, 0 extra spawns
-//            expectedSpawns[index] += chance * 0.0f;
-//            initialStateChances[index << 6] += chance * 1.0f;
-//            System.out.printf("pssy = %d, Incrementing initialStateChances[%d] by %f\n", pssy, index << 6, chance);
+            //expectedSpawns[index] += chance * 0.0f;
+            //initialStateChances[index << 6] += chance * 1.0f;
+            //System.out.printf("pssy = %d, Incrementing initialStateChances[%d] by %f\n", pssy, index << 6, chance);
             initialStateChances[index << 6 | advances] += chance;
             return;
         }
@@ -144,25 +132,37 @@ public class WitchSpawnSimulator {
         ptr += 3;
         simulatePackSpawning(index, advances, ptr,
                 4, 0, 4,
-                pssx, pssz, Arrays.binarySearch(hutState.yFloors(), pssy) >= 0, chance);
+                pssx, pssz, hutState.axis(), Arrays.binarySearch(hutState.yFloors(), pssy) >= 0, chance);
     }
 
     private void simulatePackSpawning(int index, int advances, int ptr,
                                       int attemptsRemaining, int packSize, int remainingSuccess,
-                                      int pssx, int pssz, boolean yValid, float chance) {
-//        System.out.printf("simulatePackSpawning(index=%d, adv=%d, ptr=%d, AR=%d, PS=%d, RS=%d, sx=%d" +
-//                        ", sz=%d, yV=%d, chance=%f)\n",
-//                index, advances, ptr, attemptsRemaining, packSize, remainingSuccess, pssx, pssz, yValid ? 1 : 0, chance);
+                                      int pssx, int pssz, PlaneAxis axis, boolean yValid, float chance) {
+        //System.out.printf("simulatePackSpawning(index=%d, adv=%d, ptr=%d, AR=%d, PS=%d, RS=%d, sx=%d" +
+        //                ", sz=%d, yV=%d, chance=%f)\n",
+        //        index, advances, ptr, attemptsRemaining, packSize, remainingSuccess, pssx, pssz, yValid ? 1 : 0, chance);
         final int[] randomSequence = this.randomSequence;
         final float[] expectedSpawns = this.expectedSpawns;
         final float[] initialStateChances = this.initialStateChances;
         int curX = pssx;
         int curZ = pssz;
+        int widthX;
+        int widthZ = switch (axis) {
+            case X -> {
+                widthX = 9;
+                yield 7;
+            }
+            case Z -> {
+                widthX = 7;
+                yield 9;
+            }
+            default -> throw new IllegalArgumentException("Invalid Axis");
+        };
         // simulate the spawning attempts and increments the expected number of spawns on the go
         while ((--packSize) >= 0 && remainingSuccess > 0) {
             curX += (randomSequence[ptr] % 6 - randomSequence[ptr + 1] % 6);
             curZ += (randomSequence[ptr + 4] % 6 - randomSequence[ptr + 5] % 6);
-            if (yValid && 0 <= curX && curX <= 8 && 0 <= curZ && curZ <= 6) {
+            if (yValid && 0 <= curX && curX < widthX && 0 <= curZ && curZ < widthZ) {
                 remainingSuccess--;
                 expectedSpawns[index] += chance;
             }
@@ -174,12 +174,12 @@ public class WitchSpawnSimulator {
             for (int nextPackSize = 1; nextPackSize <= 4; nextPackSize++) {
                 simulatePackSpawning(index, advances, ptr,
                         attemptsRemaining - 1, nextPackSize, remainingSuccess,
-                        pssx, pssz, yValid, chance * 0.25f);
+                        pssx, pssz, axis, yValid, chance * 0.25f);
             }
         } else {
             // this is the last pack spawn attempt, record the chances for the initial value of the next chunk
             initialStateChances[index << 6 | advances] += chance;
-//            System.out.printf("Incrementing initialStateChances[%d] by %f\n", index << 6 | advances, chance);
+            //System.out.printf("Incrementing initialStateChances[%d] by %f\n", index << 6 | advances, chance);
         }
     }
 }
